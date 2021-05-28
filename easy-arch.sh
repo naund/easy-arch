@@ -181,8 +181,9 @@ EOF
 
 # Configuring /etc/mkinitcpio.conf.
 echo "Configuring /etc/mkinitcpio.conf for LUKS hook."
-sed -i -e 's,modconf block filesystems keyboard,keyboard keymap modconf block encrypt filesystems,g' /mnt/etc/mkinitcpio.conf
-
+#systemd keyboard keymap sd-vconsole block sd-encrypt autodetect modconf filesystems fsck
+#sed -i -e 's,modconf block filesystems keyboard,keyboard keymap modconf block encrypt filesystems,g' /mnt/etc/mkinitcpio.conf
+sed -i -e 's,^HOOKS.$,HOOKS=(systemd keyboard keymap sd-vconsole block sd-encrypt autodetect modconf filesystems fsck)' /mnt/etc/mkinitcpio.conf
 # Setting up LUKS2 encryption and apparmor.
 UUID=$(blkid $Cryptroot | cut -f2 -d'"')
 sed -i "s/quiet/quiet cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf/g" /mnt/etc/default/grub
@@ -236,7 +237,7 @@ title Arch Linux
 linux /vmlinuz-linux
 initrd /intel-ucode.img
 initrd /initramfs-linux.img
-options cryptdevice=UUID="$UUID":luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
+options cryptdevice=UUID=$UUID:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
 
 EOF
 

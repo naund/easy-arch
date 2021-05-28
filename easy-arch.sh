@@ -169,6 +169,7 @@ echo "LANG=$locale.UTF-8" > /mnt/etc/locale.conf
 # Setting up keyboard layout.
 read -r -p "Please insert the keyboard layout you use: " kblayout
 echo "KEYMAP=$kblayout" > /mnt/etc/vconsole.conf
+echo FONT=lat9w-16 >> /mnt/etc/vconsole.conf
 
 # Setting hosts file.
 echo "Setting hosts file."
@@ -221,7 +222,7 @@ arch-chroot /mnt /bin/bash -e <<EOF
 EOF
 
 # config boot
-UUID=$(blkid -s UUID -o value $BTRFS)
+UUID=$(blkid -s UUID -o value "$BTRFS")
 
 cat << EOF >> /mnt/boot/loader/loader.conf
 default  arch.conf
@@ -235,7 +236,7 @@ title Arch Linux
 linux /vmlinuz-linux
 initrd /intel-ucode.img
 initrd /initramfs-linux.img
-options cryptdevice=UUID=$UUID:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
+options cryptdevice=UUID="$UUID":luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
 
 EOF
 

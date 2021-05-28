@@ -149,7 +149,7 @@ kernel_selector
 
 # Pacstrap (setting up a base sytem onto the new root).
 echo "Installing the base system (it may take a while)."
-pacstrap /mnt base $kernel $microcode linux-firmware btrfs-progs neovim sudo apparmor reflector base-devel
+pacstrap /mnt base $kernel $microcode linux-firmware btrfs-progs neovim sudo apparmor reflector
 
 network_selector
 

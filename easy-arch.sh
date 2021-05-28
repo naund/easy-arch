@@ -143,6 +143,7 @@ mkdir -p /mnt/var/lib/libvirt/images
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_lib_libvirt_images $BTRFS /mnt/var/lib/libvirt/images
 chattr +C /mnt/var/lib/libvirt/images
 mount $ESP /mnt/boot/
+mkdir -p /mnt/boot/loader
 
 kernel_selector
 
@@ -212,10 +213,29 @@ arch-chroot /mnt /bin/bash -e <<EOF
     echo "Creating a new initramfs."
     mkinitcpio -P &>/dev/null
 
-        # Installing GRUB.
+    # Installing GRUB.
     echo "Installing gummiboot on /boot."
     bootctl --path=/boot install
 
+
+EOF
+
+# config boot
+UUID=$(blkid -s UUID -o value $BTRFS)
+
+cat << EOF >> /mnt/boot/loader/loader.conf
+default  arch.conf
+timeout  4
+console-mode max
+
+EOF
+
+cat << EOF >> /mnt/boot/loader/entries/arch.conf
+title Arch Linux
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /initramfs-linux.img
+options cryptdevice=UUID=$UUID:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
 
 EOF
 

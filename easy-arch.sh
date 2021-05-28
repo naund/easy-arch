@@ -126,6 +126,9 @@ btrfs su cr /mnt/@ &>/dev/null
 btrfs su cr /mnt/@home &>/dev/null
 btrfs su cr /mnt/@snapshots &>/dev/null
 btrfs su cr /mnt/@var_log &>/dev/null
+btrfs su cr /mnt/@var_cache_pacman_pkg &>/dev/null
+btrfs su cr /mnt/@var_lib_libvirt_images &>/dev/null
+
 
 # Mounting the newly created subvolumes.
 umount /mnt
@@ -135,14 +138,17 @@ mkdir -p /mnt/{home,.snapshots,/var/log,boot}
 mount -o ssd,noatime,space_cache.compress=zstd,autodefrag,discard=async,subvol=@home $BTRFS /mnt/home
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@snapshots $BTRFS /mnt/.snapshots
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_log $BTRFS /mnt/var/log
-chattr +C /mnt/var/log
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_cache_pacman_pkg $BTRFS /mnt/var/cache/pacman/pkg
+mkdir -p /mnt/var/lib/libvirt/images
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_lib_libvirt_images $BTRFS /mnt/var/lib/libvirt/images
+chattr +C /mnt/var/lib/libvirt/images
 mount $ESP /mnt/boot/
 
 kernel_selector
 
 # Pacstrap (setting up a base sytem onto the new root).
 echo "Installing the base system (it may take a while)."
-pacstrap /mnt base $kernel $microcode linux-firmware btrfs-progs grub grub-btrfs efibootmgr snapper sudo apparmor reflector base-devel
+pacstrap /mnt base $kernel $microcode linux-firmware btrfs-progs neovim sudo apparmor reflector base-devel
 
 network_selector
 
@@ -206,22 +212,10 @@ arch-chroot /mnt /bin/bash -e <<EOF
     echo "Creating a new initramfs."
     mkinitcpio -P &>/dev/null
 
-    # Snapper configuration
-    umount /.snapshots
-    rm -r /.snapshots
-    snapper --no-dbus -c root create-config /
-    btrfs subvolume delete /.snapshots &>/dev/null
-    mkdir /.snapshots
-    mount -a
-    chmod 750 /.snapshots
+        # Installing GRUB.
+    echo "Installing gummiboot on /boot."
+    bootctl --path=/boot install
 
-    # Installing GRUB.
-    echo "Installing GRUB on /boot."
-    grub-install --target=x86_64-efi --efi-directory=/boot/ --bootloader-id=GRUB &>/dev/null
-    
-    # Creating grub config file.
-    echo "Creating GRUB config file."
-    grub-mkconfig -o /boot/grub/grub.cfg &>/dev/null
 
 EOF
 
@@ -235,12 +229,6 @@ systemctl enable apparmor --root=/mnt &>/dev/null
 
 # Enabling Reflector timer.
 systemctl enable reflector.timer --root=/mnt &>/dev/null
-
-# Enabling Snapper automatic snapshots.
-echo "Enabling Snapper and automatic snapshots entries."
-systemctl enable snapper-timeline.timer --root=/mnt &>/dev/null
-systemctl enable snapper-cleanup.timer --root=/mnt &>/dev/null
-systemctl enable grub-btrfs.path --root=/mnt &>/dev/null
 
 echo "Done, you may now wish to reboot (further changes can be done by chrooting into /mnt)."
 exit

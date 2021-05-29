@@ -1,0 +1,22 @@
+#!/usr/bin/env -S bash -e
+# Mount archlinux directory tree
+
+loadkeys de-latin1
+
+echo "Opening the newly created LUKS Container."
+Cryptroot="/dev/disk/by-partlabel/Cryptroot"
+cryptsetup open $Cryptroot cryptroot
+BTRFS="/dev/mapper/cryptroot"
+
+
+# Mounting the newly created subvolumes.
+umount /mnt
+echo "Mounting the newly created subvolumes."
+mount -o ssd,noatime,space_cache,compress=zstd,subvol=@ $BTRFS /mnt
+mkdir -p /mnt/{home,.snapshots,/var/log,boot}
+mount -o ssd,noatime,space_cache.compress=zstd,autodefrag,discard=async,subvol=@home $BTRFS /mnt/home
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@snapshots $BTRFS /mnt/.snapshots
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_log $BTRFS /mnt/var/log
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_cache_pacman_pkg $BTRFS /mnt/var/cache/pacman/pkg
+mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_lib_libvirt_images $BTRFS /mnt/var/lib/libvirt/images
+mount $ESP /mnt/boot/

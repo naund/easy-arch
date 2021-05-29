@@ -1,7 +1,7 @@
 #!/usr/bin/env -S bash -e
 # Mount archlinux directory tree
 
-# bash <(curl -sL git.io/JGGK3)
+# bash <(curl -sL git.io/JGGyo)
 
 #loadkeys de-latin1
 
@@ -9,6 +9,7 @@ echo "Opening the newly created LUKS Container."
 Cryptroot="/dev/disk/by-partlabel/Cryptroot"
 cryptsetup open $Cryptroot cryptroot
 BTRFS="/dev/mapper/cryptroot"
+ESP="/dev/disk/by-partlabel/ESP"
 
 
 # Mounting the newly created subvolumes.

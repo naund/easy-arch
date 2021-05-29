@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bash -e
 # Mount archlinux directory tree
 
+# bash <(curl -sL git.io/JGGK3)
+
 loadkeys de-latin1
 
 echo "Opening the newly created LUKS Container."

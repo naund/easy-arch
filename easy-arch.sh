@@ -134,16 +134,15 @@ btrfs su cr /mnt/@var_lib_libvirt_images &>/dev/null
 umount /mnt
 echo "Mounting the newly created subvolumes."
 mount -o ssd,noatime,space_cache,compress=zstd,subvol=@ $BTRFS /mnt
-mkdir -p /mnt/{home,.snapshots,/var/log,boot}
+mkdir -p /mnt/{home,.snapshots,/var/log,boot,/var/lib/libvirt/images,/var/cache/pacman/pkg}
 mount -o ssd,noatime,space_cache.compress=zstd,autodefrag,discard=async,subvol=@home $BTRFS /mnt/home
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@snapshots $BTRFS /mnt/.snapshots
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_log $BTRFS /mnt/var/log
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_cache_pacman_pkg $BTRFS /mnt/var/cache/pacman/pkg
-mkdir -p /mnt/var/lib/libvirt/images
 mount -o ssd,noatime,space_cache,compress=zstd,autodefrag,discard=async,subvol=@var_lib_libvirt_images $BTRFS /mnt/var/lib/libvirt/images
 chattr +C /mnt/var/lib/libvirt/images
 mount $ESP /mnt/boot/
-mkdir -p /mnt/boot/loader
+mkdir -p /mnt/boot/loader/entries
 
 kernel_selector
 
@@ -173,7 +172,7 @@ echo FONT=lat9w-16 >> /mnt/etc/vconsole.conf
 
 # Setting hosts file.
 echo "Setting hosts file."
-cat > /mnt/etc/hosts <<EOF
+cat > /mnt/etc/hosts << EOF
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   $hostname.localdomain   $hostname
@@ -199,30 +198,18 @@ EOF
 
 
 # config boot
-UUID=$(blkid $Cryptroot | cut -f2 -d'"')
 
-cat << EOF >> /mnt/boot/loader/loader.conf
+cat << EOF > /mnt/boot/loader/loader.conf
 default  arch.conf
 timeout  4
 console-mode max
-EOF
-
-#sed -i "s/quiet/quiet cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf/g" /mnt/etc/default/grub
-
-cat << EOF >> /mnt/boot/loader/entries/arch.conf
-title Arch Linux
-linux /vmlinuz-linux
-initrd /intel-ucode.img
-initrd /initramfs-linux.img
-options cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf rootflags=subvol=@ rw
-
 EOF
 
 
 # Configuring the system.    
 arch-chroot /mnt /bin/bash -e <<EOF
     
-    # Setting up timezone.
+    # Setting up timezone.mkdir -p /mnt/{home,.snapshots,/var/log,boot}
     ln -sf /usr/share/zoneinfo/$(curl -s http://ip-api.com/line?fields=timezone) /etc/localtime &>/dev/null
     
     # Setting up clock.
@@ -242,6 +229,18 @@ arch-chroot /mnt /bin/bash -e <<EOF
 
 
 EOF
+
+#sed -i "s/quiet/quiet cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf/g" /mnt/etc/default/grub
+UUID=$(blkid $Cryptroot | cut -f2 -d'"')
+
+cat << EOF > /mnt/boot/loader/entries/arch.conf
+title Arch Linux
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /initramfs-linux.img
+options cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf rootflags=subvol=@ rw
+EOF
+
 
 # Setting root password.
 echo "Setting root password."

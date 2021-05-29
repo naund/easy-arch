@@ -3,7 +3,7 @@
 
 # bash <(curl -sL git.io/JGGK3)
 
-loadkeys de-latin1
+#loadkeys de-latin1
 
 echo "Opening the newly created LUKS Container."
 Cryptroot="/dev/disk/by-partlabel/Cryptroot"

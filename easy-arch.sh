@@ -182,11 +182,9 @@ EOF
 # Configuring /etc/mkinitcpio.conf.
 echo "Configuring /etc/mkinitcpio.conf for LUKS hook."
 #systemd keyboard keymap sd-vconsole block sd-encrypt autodetect modconf filesystems fsck
-#sed -i -e 's,modconf block filesystems keyboard,keyboard keymap modconf block encrypt filesystems,g' /mnt/etc/mkinitcpio.conf
-sed -i -e 's,^HOOKS.$,HOOKS=(systemd keyboard keymap sd-vconsole block sd-encrypt autodetect modconf filesystems fsck)' /mnt/etc/mkinitcpio.conf
+sed -i -e 's,modconf block filesystems keyboard,keyboard keymap modconf block encrypt filesystems,g' /mnt/etc/mkinitcpio.conf
+#sed -i -e 's,^HOOKS.$,HOOKS=(systemd keyboard keymap sd-vconsole block sd-encrypt autodetect modconf filesystems fsck)' /mnt/etc/mkinitcpio.conf
 # Setting up LUKS2 encryption and apparmor.
-UUID=$(blkid $Cryptroot | cut -f2 -d'"')
-sed -i "s/quiet/quiet cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf/g" /mnt/etc/default/grub
 
 # Security kernel settings.
 echo "kernel.kptr_restrict = 2" > /mnt/etc/sysctl.d/51-kptr-restrict.conf
@@ -197,6 +195,29 @@ cat << EOF >> /mnt/etc/sysctl.d/10-security.conf
     net.core.bpf_jit_harden = 2
     kernel.yama.ptrace_scope = 3
 EOF
+
+
+
+# config boot
+UUID=$(blkid $Cryptroot | cut -f2 -d'"')
+
+cat << EOF >> /mnt/boot/loader/loader.conf
+default  arch.conf
+timeout  4
+console-mode max
+EOF
+
+#sed -i "s/quiet/quiet cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf/g" /mnt/etc/default/grub
+
+cat << EOF >> /mnt/boot/loader/entries/arch.conf
+title Arch Linux
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /initramfs-linux.img
+options cryptdevice=UUID=$UUID:cryptroot root=$BTRFS lsm=lockdown,yama,apparmor,bpf rootflags=subvol=@ rw
+
+EOF
+
 
 # Configuring the system.    
 arch-chroot /mnt /bin/bash -e <<EOF
@@ -219,25 +240,6 @@ arch-chroot /mnt /bin/bash -e <<EOF
     echo "Installing gummiboot on /boot."
     bootctl --path=/boot install
 
-
-EOF
-
-# config boot
-UUID=$(blkid -s UUID -o value "$BTRFS")
-
-cat << EOF >> /mnt/boot/loader/loader.conf
-default  arch.conf
-timeout  4
-console-mode max
-
-EOF
-
-cat << EOF >> /mnt/boot/loader/entries/arch.conf
-title Arch Linux
-linux /vmlinuz-linux
-initrd /intel-ucode.img
-initrd /initramfs-linux.img
-options cryptdevice=UUID=$UUID:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rd.luks.options=discard rw
 
 EOF
 
